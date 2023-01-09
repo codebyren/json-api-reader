@@ -1,0 +1,26 @@
+{
+  "name": "@codebyren/json-api-reader",
+  "version": "1.0.0",
+  "description": "A basic reader for working with json:api responses.",
+  "main": "dist/cjs/index.js",
+  "module": "dist/esm/index.js",
+  "type": "module",
+  "scripts": {
+    "build": "npx rollup -c",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "json:api",
+    "reader",
+    "parser"
+  ],
+  "author": "CodeByRen",
+  "license": "ISC",
+  "devDependencies": {
+    "@rollup/plugin-commonjs": "^23.0.2",
+    "rollup": "^2.79.1",
+    "rollup-plugin-typescript2": "^0.34.1",
+    "tslib": "^2.4.0",
+    "typescript": "^4.8.4"
+  }
+}
