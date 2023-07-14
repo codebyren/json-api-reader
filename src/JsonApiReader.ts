@@ -1,65 +1,89 @@
-import Record from "./Record";
-
-interface Transformer {
-  transform(): TransformedItem;
+// This represents the simple object that we feed
+// into transformer (if any) specified by user.
+// It's just a merging of id (required) and
+// the remaining attributes of the object.
+interface ITransformableItem {
+  id: string;
+  [key: string]: any;
 }
 
-interface TransformedItem {
-  [key: number | string]: any;
+// Users can provide transformers to transform data
+// to their desired formats once parsing is done.
+interface ITransformer {
+  transform(obj: ITransformableItem): any; // Output is up to user. So genuinely "any".
 }
 
-interface ListOfRelationships {
-  [key: string]: RelationshipObject;
+// Just the container for all the user-provided transformers
+// indexed by resource type that they are to be used for.
+interface IListOfTransformers {
+  [key: string]: ITransformer; // e.g { book: BookTransformer, author: AuthorTransformer }
 }
 
-interface JsonApiResourceObject {
+// This is what a JSON:API response looks like at the top level.
+interface IJsonResponse {
+  data?: IJsonApiResourceObject | IJsonApiResourceObject[]; // single item or array of items
+  included?: IJsonApiResourceObject[];
+  errors?: object[];
+}
+
+// This is what the records in the JSON:API response look like.
+interface IJsonApiResourceObject {
   id: string;
   type: string;
   attributes: object;
-  relationships?: ListOfRelationships;
+  relationships?: IListOfRelationships;
   links?: object;
   meta?: object;
 }
+
+// For empty to-one relationships in the JSON:API response.
+type TResourceLinkObjectNull = null;
+
+// For empty to-many relationships in the JSON:API response.
+type TResourceLinkObjectEmpty = [];
 
 // Reminder: Since we're only handling JSON:API *responses*, we don't worry about "lid" (local ID)
 // which gets used for resources that exist client side but have not yet been created server-side.
 // https://jsonapi.org/format/#document-resource-identifier-objects
-interface ResourceIdentifierObject {
+interface IResourceIdentifierObject {
   id: string;
   type: string;
   meta?: object;
 }
 
-// For empty to-one relationships.
-type ResourceLinkObjectNull = null;
-
-// For empty to-many relationships.
-type ResourceLinkObjectEmpty = [];
-
+// Each relationship node in the JSON:API response is basically
+// a short pointer to the full record in the "included" node.
 interface RelationshipObject {
   data:
-    | ResourceIdentifierObject
-    | ResourceIdentifierObject[]
-    | ResourceLinkObjectNull
-    | ResourceLinkObjectEmpty;
+    | IResourceIdentifierObject
+    | IResourceIdentifierObject[]
+    | TResourceLinkObjectNull
+    | TResourceLinkObjectEmpty;
   links?: object;
   meta?: object;
 }
 
-interface JsonResponse {
-  data?: JsonApiResourceObject | JsonApiResourceObject[]; // single item or array of items
-  included?: JsonApiResourceObject[];
-  errors?: object[];
+// The container for all relationships included in the JSON:API response.
+interface IListOfRelationships {
+  [key: string]: RelationshipObject;
 }
 
-interface TransformerArray {
-  [key: string]: any;
+// We'll keep a record of descriptors that define relationships
+// already processed in order to prevent recursion where one
+// record has a parent AND child relationship to another.
+// "{PARENT_TYPE}_{PARENT_ID}:{CHILD_RELATION_TYPE}"
+// E.g. "comment_123:author"
+interface IProcessedRelationshipTransportObject {
+  parent_type: string;
+  parent_id: string;
+  child_type: string;
 }
 
 export default class JsonApiReader {
-  transformers: TransformerArray = {};
+  transformers: IListOfTransformers = {};
+  rel_cache: Set<string> = new Set();
 
-  setTransformer(type: string, method: Transformer): void {
+  setTransformer(type: string, method: ITransformer): void {
     this.transformers[type] = method;
   }
 
@@ -67,7 +91,7 @@ export default class JsonApiReader {
     return this.transformers.hasOwnProperty(type);
   }
 
-  transform(obj: object, type: string): TransformedItem {
+  transform(obj: ITransformableItem, type: string): any {
     const transformer =
       type && this.hasTransformer(type) ? this.transformers[type] : false;
 
@@ -76,7 +100,25 @@ export default class JsonApiReader {
       : obj;
   }
 
-  parse(jsonResponse: JsonResponse): Record | Record[] {
+  makeRelationshipDescriptor(
+    details: IProcessedRelationshipTransportObject
+  ): string {
+    return `${details.parent_type}_${details.parent_id}:${details.child_type}`.toUpperCase();
+  }
+
+  commitRelationship(details: IProcessedRelationshipTransportObject): void {
+    const descriptor = this.makeRelationshipDescriptor(details);
+    this.rel_cache.add(descriptor);
+  }
+
+  canRecallRelationship(
+    details: IProcessedRelationshipTransportObject
+  ): boolean {
+    const descriptor = this.makeRelationshipDescriptor(details);
+    return this.rel_cache.has(descriptor);
+  }
+
+  parse(jsonResponse: IJsonResponse): any | any[] {
     const invalid_data_message = "Unexpected input data format.";
 
     // @todo - JSON:API could have top-level node of "errors" instead of "data" if errors occurred.
@@ -89,7 +131,7 @@ export default class JsonApiReader {
 
     // For coding convenience, we'll be forcing single objects into an array
     // (we'll restore to initial object vs array of objects before return)
-    let stash: Record[] = [];
+    let stash: any[] = [];
     const data = jsonResponse.data;
     const included = jsonResponse.included ? jsonResponse.included : [];
 
@@ -100,30 +142,37 @@ export default class JsonApiReader {
 
     // Here's where we force an array so code can always loop
     // even if there is only the one item inside the array.
-    const is_array = Array.isArray(data);
-    const items = is_array ? data : [data];
+    const items = Array.isArray(data) ? data : [data];
 
     items.forEach((item) => {
-      let record = new Record();
-      const type = item.type;
+      const item_type = item.type; // book, author etc.
       const relationships = item.relationships;
-      let entity = this.transform(
-        Object.assign({}, { id: item.id }, item.attributes),
-        type
+      let record: ITransformableItem = Object.assign(
+        { id: item.id },
+        item.attributes
       );
-
-      Object.keys(entity).forEach((key) => {
-        record[key as keyof Record] = entity[key];
-      });
+      record = this.transform(record, item_type);
 
       if (typeof relationships === "object") {
         Object.keys(relationships).forEach((k) => {
           const rel = relationships[k];
-          const summary = rel.data; // object like { id: 123, type: 'user' } or an array of such items
+          const summary = rel.data; // object like { id: 123, type: 'user' } or an array of such items (or NULL!)
+
+          // Record that we are processing this relationship
+          // or abort early if we've' already processed it.
+          let rel_details: IProcessedRelationshipTransportObject = {
+            parent_type: item_type,
+            parent_id: item.id,
+            child_type: k,
+          };
+          if (this.canRecallRelationship(rel_details)) {
+            return;
+          }
+          this.commitRelationship(rel_details);
 
           // Again, we're going to force array format for easy
           // looping even when only dealing with one object.
-          let includes: object[] = [];
+          let includes: any[] = [];
           let summaries = Array.isArray(summary) ? summary : [summary];
 
           summaries.forEach((s) => {
@@ -132,15 +181,7 @@ export default class JsonApiReader {
             });
 
             matches.forEach((match) => {
-              let innerRelationships = match.relationships || {};
-              if (Object.keys(innerRelationships).length > 0) {
-                // Need to do some recursion
-                includes.push(this.parse({ data: match, included }));
-              } else {
-                // Just need to transform this item
-                // includes.push(this.transform(match, match.type));
-                includes.push(this.parse({ data: match, included }));
-              }
+              includes.push(this.parse({ data: match, included }));
             });
           });
 
@@ -148,15 +189,24 @@ export default class JsonApiReader {
           const relation_data = Array.isArray(summary)
             ? includes
             : includes.shift();
-          record.setRelation(
-            k,
-            typeof relation_data === "undefined" ? null : relation_data
-          ); // includes.shift() may produce undefined for empty array
+          if (record.hasOwnProperty(k)) {
+            throw new Error(
+              `Cannot set relation as '${k}' on object. Property name already in use.`
+            );
+          } else {
+            // Reminder: includes.shift() may produce undefined for empty array
+            record[k] =
+              typeof relation_data === "undefined" ? null : relation_data;
+          }
         });
       }
 
       stash.push(record);
     });
+
+    // Now reset the cache of relationships processed in case this
+    // instance of the reader is used to parse other responses.
+    this.rel_cache = new Set();
 
     // Now return data in original jsonResponse format
     // (meaning a single object or array of objects)
