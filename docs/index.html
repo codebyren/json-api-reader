@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="dark">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="referrer" content="no-referrer">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <!-- <script defer src="json-api-reader.js"></script> -->
+    <title>JSON:API Reader</title>
+
+    <!-- favicon -->
+    <!-- https://stackoverflow.com/questions/1321878/how-to-prevent-favicon-ico-requests -->
+    <link rel="icon" type="image/png" href="data:image/png;base64,iVBORw0KGgo=">
+
+    <!-- Styles -->
+    <!-- Trusty Bootstrap  -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
+        integrity="sha256-fx038NkLY4U1TCrBDiu5FWPEa9eiZu01EiLryshJbCo=" crossorigin="anonymous">
+    <!-- Prism for syntax highlighting  -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/themes/prism-tomorrow.min.css"
+        integrity="sha256-GxX+KXGZigSK67YPJvbu12EiBx257zuZWr0AMiT1Kpg=" crossorigin="anonymous">
+
+    <!-- JS -->
+    <script>
+
+        // Sample JSON:API response for use in documentation
+        window.sampleJsonApiResponse = JSON.parse('{"links":{"self":"http://example.com/articles","next":"http://example.com/articles?page[offset]=2","last":"http://example.com/articles?page[offset]=10"},"data":[{"type":"articles","id":"1","attributes":{"title":"JSON:API paints my bikeshed!"},"relationships":{"author":{"links":{"self":"http://example.com/articles/1/relationships/author","related":"http://example.com/articles/1/author"},"data":{"type":"people","id":"9"}},"comments":{"links":{"self":"http://example.com/articles/1/relationships/comments","related":"http://example.com/articles/1/comments"},"data":[{"type":"comments","id":"5"},{"type":"comments","id":"12"}]}},"links":{"self":"http://example.com/articles/1"}}],"included":[{"type":"people","id":"9","attributes":{"firstName":"Dan","lastName":"Gebhardt","twitter":"dgeb"},"links":{"self":"http://example.com/people/9"}},{"type":"people","id":"2","attributes":{"firstName":"Bob","lastName":"Fakeman","twitter":"fake"},"links":{"self":"http://example.com/people/2"}},{"type":"comments","id":"5","attributes":{"body":"First!"},"relationships":{"author":{"data":{"type":"people","id":"2"}}},"links":{"self":"http://example.com/comments/5"}},{"type":"comments","id":"12","attributes":{"body":"I like XML better"},"relationships":{"author":{"data":{"type":"people","id":"9"}}},"links":{"self":"http://example.com/comments/12"}}]}');
+
+        // Load local JS for when working on documentation locally
+        // vs specific version when documentation being viewed.
+        if (window.location.hostname.indexOf('github') < 0) {
+            console.log('[REMINDER] Using relative version of json-api-reader.js');
+            document.write('<script src="json-api-reader.js"><\/script>');
+        }
+        else {
+            console.log('[REMINDER] Using CDN version of json-api-reader.js');
+            document.write('<script defer src="https://cdn.jsdelivr.net/npm/json-api-reader@1.0.0/dist/umd/json-api-reader.js"><\/script>');
+        }
+    </script>
+    <script defer src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/prism.js"
+        integrity="sha256-S5mU/F9EHUxP/yPe4lNcCQEL+TsdkMLHKwQww9PxAI4=" crossorigin="anonymous"></script>
+
+    <style>
+        .font-monospace {
+            font-family: monospace;
+        }
+
+        div.sample-code pre {
+            border-radius: 1rem;
+            display: inline-block;
+            height: 300px;
+            width: 100%;
+            overflow: scroll;
+        }
+    </style>
+
+</head>
+
+<body>
+
+    <div class="container-sm my-4">
+
+        <h1 class="font-monospace display-5" id="anchor_top">JSON API Reader</h1>
+        <p class="font-monospace lead">A simple reader for json:api conformant APIs.</p>
+
+        <p>
+            On github: <a href="https://github.com/codebyren/json-api-reader">codebyren/json-api-reader</a>
+        </p>
+
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-body">
+                        <p class="card-text">
+                            <small>Quick Jump:</small>
+                            <a href="#anchor_installation" class="btn btn-sm btn-primary ms-2">Installation</a>
+                            <small class="ms-2">/</small>
+                            <a href="#anchor_usage" class="btn btn-sm btn-secondary ms-2">Basic Usage</a>
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row mb-4">
+            <div class="col-12">
+                <h1 class="h3">What is it?</h1>
+                <p class="lead">
+                    This is a small package (<code>~2KB</code>) that focuses on reading records and
+                    their relationships from a succesful <a href="https://jsonapi.org/">JSON:API</a> response.
+                </p>
+                <p>
+                    It is good for rapid prototyping and for use with JS frameworks like Vue, React etc.
+                </p>
+
+                <p>
+                    If you're looking for something more advanced that can handle fetching data, paginating results etc.
+                    then
+                    there are other more sophisticated <a
+                        href="https://jsonapi.org/implementations/#client-libraries-javascript">JSON:API client
+                        implementations</a>
+                    available.
+                    You may still find this package useful when it comes to actually consuming the records in the
+                    response though.
+                </p>
+            </div>
+        </div>
+
+        <div class="row gy-2 mb-4">
+
+            <div class="col-12">
+                <h1 class="h3">A Quick Example</h1>
+            </div>
+
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header"><strong>BEFORE:</strong> Sample JSON:API Response</div>
+                    <div class="card-body">
+                        <p>Many advantages but tough on the eyeballs.</p>
+                        <div class="sample-code">
+                            <pre><code id="exampleBefore" class="language-javascript"></code></pre>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header"><strong>AFTER:</strong> Only records and relationships.</div>
+                    <div class="card-body">
+                        <p>Simple to navigate.</p>
+                        <div class="sample-code">
+                            <pre><code id="exampleAfter" class="language-javascript"></code></pre>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <div class="row mb-4">
+            <div class="col">
+
+                <p>The processed response is immediately much easier to work with in UI frameworks:</p>
+
+                <div class="sample-code">
+                    <pre><code class="language-html">&lt;!-- A Vue JS example looping through articles and comments --&gt;
+&lt;div v-for=&quot;article in articles&quot; :key="article.id"&gt;
+    &lt;h1&gt;{{ article.title }}&lt;/h1&gt;
+    &lt;h2&gt;Comments&lt;/h2&gt;
+    &lt;div v-if=&quot;article.comments.length &gt; 0&quot;&gt;
+        &lt;p v-for=&quot;comment in article.comments&quot; :key="comment.id" &gt;
+            &lt;small&gt;{{ comment.author.first_name }} said:&lt;/small&gt;
+            &lt;br&gt;
+            &lt;span&gt;{{ comment.body }} &lt;/span&gt;
+        &lt;/p&gt;
+    &lt;/div&gt;
+    &lt;p v-else&gt;No comments yet.&lt;/p&gt;
+&lt;/div&gt;
+</code></pre>
+                </div>
+            </div>
+        </div>
+
+        <div class="row mb-4">
+
+            <div class="col">
+
+                <h1 class="h3" id="anchor_installation">Installation</h1>
+
+                <div class="mb-4">
+                    <p>Using <abbr title="Node Package Manager">npm</abbr></p>
+                    <pre><code class="language-bash">npm install --save json-api-reader</code></pre>
+                </div>
+
+                <div class="mb-2">
+                    <p>
+                        Using a <abbr title="Content Delivery Network">CDN</abbr> link from <a
+                            href="https://www.jsdelivr.com">jsdelivr</a>.
+                        <br>
+                        <small class="text-muted">
+                            <strong>Recommended</strong>: Go to the package page on jsdelivr, identify the latest
+                            version and get a script tag with its
+                            <abbr title="Subresource Integrity">SRI</abbr> hash for that specific version when you get
+                            started.</small>
+                    </p>
+                    <pre><code class="language-html">&lt;!-- WARNING: The link below always points to the LATEST version --&gt;
+&lt;!-- (go to jsdelivr and get a link for the specific version you want) --&gt;
+&lt;script src="https://cdn.jsdelivr.net/npm/json-api-reader@latest/dist/umd/json-api-reader.js"&gt;&lt;/script&gt;</code></pre>
+                    <!-- <pre><code class="language-html">&lt;script src="https://cdn.jsdelivr.net/gh/codebyren/json-api-reader@v1.0.0/dist/umd/json-api-reader.js"&gt;&lt;/script&gt;</code></pre> -->
+                    <p>You can also download the above JS and host it yourself.</p>
+                </div>
+
+            </div>
+
+        </div>
+
+        <div class="row mb-4">
+
+            <div class="col">
+                <h1 class="h3" id="anchor_usage">Basic Usage</h1>
+
+                <div class="sample-code">
+                    <pre><code class="language-javascript">// Assume a list of blog posts is fetched via the browser's native fetch method:
+const response = await fetch('https://example.com/blog/posts.json?include=author,comments');
+const json = await response.json();
+
+// Create a reader to process the json response
+const reader = new JsonApiReader();
+const posts = reader.parse(json);
+
+// Now loop through the data from the response in a sane way.
+// Each record has all its data merged into a simple object.
+posts.forEach(post => {
+    // Attributes:
+    const id = post.id;
+    const title = post.title;
+    // Relationships:
+    const author = post.author;
+    const comments = post.comments;
+});
+</code></pre>
+                </div>
+            </div>
+
+        </div>
+
+        <div class="row mb-4">
+
+            <div class="col">
+
+                <h1 class="h3" id="anchor_transformers">Using Transformers</h1>
+
+                <p>Transformers allow you to modify objects before they are returned.</p>
+                <p>This allows you to do things like:</p>
+                <ul>
+                    <li>Convert string IDs into integers</li>
+                    <li>Convert date strings to objects using your chosen date package</li>
+                    <li>Deal with any property/relationship naming conflicts</li>
+                    <li>Add convenient properties to an object</li>
+                    <li>Etc.</li>
+                </ul>
+
+                <div class="sample-code mb-2">
+                    <pre><code class="language-javascript">// Let's pick up once we have a successful JSON:API response.
+const json = await getSuccessfulJsonApiResponse();
+
+// Create a reader to process the json response.
+const reader = new JsonApiReader();
+
+// Here you can set a simple callback function as a transformer.
+// The callback receives an object which has already had all
+// data merged into it as if no transformer was specified.
+reader.setTransformer('comments', comment => {
+    comment.word_count = typeof comment.body === 'string'
+        ? comment.body.split(' ').length
+        : 0;
+});
+
+// Alternatively, you can use an object with a transform method:
+const myPeopleTransformer = {
+    transform(person) {
+        const modified = Object.assign(
+            {},
+            person,
+            {
+                id: parseInt(person.id, 10), // We want the id values as integers
+                fullName: `${person.firstName} ${person.lastName}`.trim(), // We want a convenient full name property.
+            }
+        );
+        return modified;
+    }
+}
+
+// The above transformer is for objects with { type: people } in JSON:API structure.
+reader.setTransformer('people', myPeopleTransformer);
+
+// The parser will now apply myPeopleTransformer when it encounters "people".
+const posts = reader.parse(json);
+</code></pre>
+                </div> <!-- .sample code -->
+
+                <p>A person transformed by the above transformer would then look something like this:</p>
+
+                <div class="sample-code">
+                    <pre style="height: 200px;"><code class="language-javascript">{
+  id: 2, // converted to int by transformer
+  firstName: 'Bob', // left alone
+  lastName: 'Fakeman', // left alone
+  twitter: 'fake', // left alone
+  fullName: 'Bob Fakeman', // added by transformer
+}
+</code></pre>
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <hr>
+
+    <p class="text-center">
+        <span class="text-muted">Code &amp; documentation by </span> <a href="https://codebyren.com">codebyren</a>
+    </p>
+    <p class="text-center font-monospace">
+        <small>You have reached the bottom.</small>
+        <br>
+        <a class="btn btn-primary btn-sm" href="#anchor_top">Go back up &uarr;</a>
+    </p>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+
+            (() => {
+                // Show the before and after when processing JSON:API content
+                const sampleJson = window.sampleJsonApiResponse;
+                const reader = new JsonApiReader();
+                const transformed = reader.parse(sampleJson);
+                const beforeEl = document.querySelector('#exampleBefore');
+                const afterEl = document.querySelector('#exampleAfter');
+                beforeEl.innerHTML = JSON.stringify(window.sampleJsonApiResponse, null, 2);
+                afterEl.innerHTML = JSON.stringify(transformed, null, 2);
+                Prism.highlightElement(beforeEl);
+                Prism.highlightElement(afterEl);
+                // Prism.highlightAll();
+            })();
+        });
+    </script>
+
+</body>
+
+</html>

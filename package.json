@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "description": "A basic reader for working with json:api responses.",
   "homepage": "https://github.com/codebyren/json-api-reader#readme",
+  "browser": "dist/umd/json-api-reader.js",
   "main": "dist/cjs/index.js",
   "module": "dist/esm/index.js",
   "type": "module",

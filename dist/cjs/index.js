@@ -7,16 +7,19 @@ class JsonApiReader {
         this.transformers = {};
         this.rel_cache = new Set();
     }
-    setTransformer(type, method) {
-        this.transformers[type] = method;
+    setTransformer(type, transformer) {
+        this.transformers[type] = transformer;
     }
     hasTransformer(type) {
         return this.transformers.hasOwnProperty(type);
     }
     transform(obj, type) {
         const transformer = type && this.hasTransformer(type) ? this.transformers[type] : false;
-        return transformer && transformer instanceof Function
-            ? transformer(obj)
+        const callback = (typeof transformer === 'object' && transformer.hasOwnProperty('transform'))
+            ? transformer.transform
+            : transformer;
+        return callback && callback instanceof Function
+            ? callback(obj)
             : obj;
     }
     makeRelationshipDescriptor(details) {

@@ -9,14 +9,16 @@ interface ITransformableItem {
 
 // Users can provide transformers to transform data
 // to their desired formats once parsing is done.
-interface ITransformer {
+// The transformer can be provided as a class
+// with a transform method. Or a callback fn.
+interface ITransformerClass {
   transform(obj: ITransformableItem): any; // Output is up to user. So genuinely "any".
 }
 
 // Just the container for all the user-provided transformers
 // indexed by resource type that they are to be used for.
 interface IListOfTransformers {
-  [key: string]: ITransformer; // e.g { book: BookTransformer, author: AuthorTransformer }
+  [key: string]: ITransformerClass | Function; // e.g { book: BookTransformer, author: callbackFunction }
 }
 
 // This is what a JSON:API response looks like at the top level.
@@ -83,8 +85,8 @@ export default class JsonApiReader {
   transformers: IListOfTransformers = {};
   rel_cache: Set<string> = new Set();
 
-  setTransformer(type: string, method: ITransformer): void {
-    this.transformers[type] = method;
+  setTransformer(type: string, transformer: ITransformerClass | Function): void {
+    this.transformers[type] = transformer;
   }
 
   hasTransformer(type: string): boolean {
@@ -94,9 +96,12 @@ export default class JsonApiReader {
   transform(obj: ITransformableItem, type: string): any {
     const transformer =
       type && this.hasTransformer(type) ? this.transformers[type] : false;
+    const callback = (typeof transformer === 'object' && transformer.hasOwnProperty('transform'))
+      ? transformer.transform
+      : transformer;
 
-    return transformer && transformer instanceof Function
-      ? transformer(obj)
+    return callback && callback instanceof Function
+      ? callback(obj)
       : obj;
   }
 
