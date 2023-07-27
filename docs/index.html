@@ -36,7 +36,7 @@
         }
         else {
             console.log('[REMINDER] Using CDN version of json-api-reader.js');
-            document.write('<script defer src="https://cdn.jsdelivr.net/npm/json-api-reader@1.0.0/dist/umd/json-api-reader.js"><\/script>');
+            document.write('<script src="https://cdn.jsdelivr.net/npm/json-api-reader@1.0.0/dist/umd/json-api-reader.js" integrity="sha256-BoyvGQ2AByYGt/+zRykrqragtl3Ky2S5vM0cnpsFpCE=" crossorigin="anonymous"><\/script>');
         }
     </script>
     <script defer src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/prism.js"
@@ -88,21 +88,16 @@
             <div class="col-12">
                 <h1 class="h3">What is it?</h1>
                 <p class="lead">
-                    This is a small package (<code>~2KB</code>) that focuses on reading records and
-                    their relationships from a succesful <a href="https://jsonapi.org/">JSON:API</a> response.
-                </p>
-                <p>
-                    It is good for rapid prototyping and for use with JS frameworks like Vue, React etc.
+                    A small package (<code>~2KB</code>) that reads the data from a succesful <a href="https://jsonapi.org/">JSON:API</a> response
+                    and makes it available in a format that is easier to deal with.
                 </p>
 
                 <p>
-                    If you're looking for something more advanced that can handle fetching data, paginating results etc.
-                    then
-                    there are other more sophisticated <a
-                        href="https://jsonapi.org/implementations/#client-libraries-javascript">JSON:API client
-                        implementations</a>
+                    If you're looking for something that can handle fetching data, paginating results etc.
+                    then there are other more sophisticated
+                    <a href="https://jsonapi.org/implementations/#client-libraries-javascript">JSON:API client implementations</a>
                     available.
-                    You may still find this package useful when it comes to actually consuming the records in the
+                    You may still find this package useful when it comes to actually navigating the records in the
                     response though.
                 </p>
             </div>
@@ -177,18 +172,22 @@
 
                 <div class="mb-2">
                     <p>
-                        Using a <abbr title="Content Delivery Network">CDN</abbr> link from <a
-                            href="https://www.jsdelivr.com">jsdelivr</a>.
+                        Using a <abbr title="Content Delivery Network">CDN</abbr> link from jsdelivr.
                         <br>
                         <small class="text-muted">
-                            <strong>Recommended</strong>: Go to the package page on jsdelivr, identify the latest
-                            version and get a script tag with its
+                            <strong>Recommended</strong>: Find the package on jsdelivr (should eventually be <a href="https://www.jsdelivr.com/package/npm/json-api-reader">here</a>), identify the
+                            version that you want and get a script tag with its
                             <abbr title="Subresource Integrity">SRI</abbr> hash for that specific version when you get
                             started.</small>
                     </p>
-                    <pre><code class="language-html">&lt;!-- WARNING: The link below always points to the LATEST version --&gt;
-&lt;!-- (go to jsdelivr and get a link for the specific version you want) --&gt;
-&lt;script src="https://cdn.jsdelivr.net/npm/json-api-reader@latest/dist/umd/json-api-reader.js"&gt;&lt;/script&gt;</code></pre>
+                    <pre><code class="language-html">&lt;!-- Try out the LATEST version (DEVELOPMENT ONLY) --&gt;
+&lt;script src="https://cdn.jsdelivr.net/npm/json-api-reader@latest/dist/umd/json-api-reader.js"&gt;&lt;/script&gt;
+
+&lt;!-- Or use a specific version like 1.0.0 --&gt;
+&lt;script src="https://cdn.jsdelivr.net/npm/json-api-reader@1.0.0/dist/umd/json-api-reader.js" integrity="sha256-BoyvGQ2AByYGt/+zRykrqragtl3Ky2S5vM0cnpsFpCE=" crossorigin="anonymous"&gt;&lt;/script&gt;
+
+&lt;!-- Or use the latest in a specific release (here it's 1.x) --&gt;
+&lt;script src="https://cdn.jsdelivr.net/npm/json-api-reader@1/dist/umd/json-api-reader.js"&gt;&lt;/script&gt;</code></pre>
                     <!-- <pre><code class="language-html">&lt;script src="https://cdn.jsdelivr.net/gh/codebyren/json-api-reader@v1.0.0/dist/umd/json-api-reader.js"&gt;&lt;/script&gt;</code></pre> -->
                     <p>You can also download the above JS and host it yourself.</p>
                 </div>
@@ -257,6 +256,7 @@ reader.setTransformer('comments', comment => {
     comment.word_count = typeof comment.body === 'string'
         ? comment.body.split(' ').length
         : 0;
+    return comment;
 });
 
 // Alternatively, you can use an object with a transform method:

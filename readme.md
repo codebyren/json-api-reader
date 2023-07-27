@@ -9,7 +9,7 @@ The primary goal is to unpack response data and produce an output that is easier
 A complicated (but very efficient) JSON:API response could be converted to something like this:
 
 ```javascript
-// An sample article record with relationships.
+// A sample article record with relationships.
 {
 	"id": 123,
 	"title": "Some article title",
